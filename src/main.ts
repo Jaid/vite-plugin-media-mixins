@@ -10,7 +10,9 @@ export default function mediaMixinsPlugin() {
     narrow: 'screen and (max-width: 599px)',
     squat: 'screen and (max-height: 599px)',
     static: '(prefers-reduced-motion: reduce)',
+    motion: 'not (prefers-reduced-motion: reduce)',
     light: '(prefers-color-scheme: light)',
+    dark: '(prefers-color-scheme: dark)',
   }
   const plugin: Plugin = {
     name: 'media-mixins',
