@@ -2,6 +2,12 @@
   "name": "vite-plugin-media-mixins",
   "version": "0.1.0",
   "type": "module",
+  "funding": "https://github.com/sponsors/Jaid",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jaid/vite-plugin-media-mixins.git"
+  },
   "exports": {
     ".": {
       "default": "./src/main.ts"
@@ -11,12 +17,15 @@
     "#src/*": "./src/*",
     "#root/*": "./*"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Jaid/vite-plugin-media-mixins.git"
-  },
   "scripts": {
     "test": "bun test --max-concurrency 1 ./test"
+  },
+  "dependencies": {
+    "es-toolkit": "^1.46.1",
+    "flatten-string": "^0.1.0"
+  },
+  "peerDependencies": {
+    "vite": "^8.0.13"
   },
   "devDependencies": {
     "bun-types": "^1.3.14",
@@ -24,7 +33,5 @@
     "eslint-config-jaid": "^26.0.0",
     "tsconfig-jaid-bun": "^15.2.0",
     "typescript": "^6.0.3"
-  },
-  "funding": "https://github.com/sponsors/Jaid",
-  "license": "MIT"
+  }
 }
