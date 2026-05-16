@@ -15,12 +15,12 @@ export default function mediaMixinsPlugin() {
   const plugin: Plugin = {
     name: 'media-mixins',
     config(config) {
-      update(config, 'css.preprocessorOptions.scss.additionalData', content => {
-        return flattenString.paragraphs(content, makeMixins(mixins))
-      })
-      update(config, 'css.preprocessorOptions.sass.additionalData', content => {
-        return flattenString.paragraphs(content, makeMixins(mixins, 'sass'))
-      })
+      for (const flavor of ['scss', 'sass'] as const) {
+        update(config, `css.preprocessorOptions.${flavor}.additionalData`, content => {
+          const newContent = flattenString.paragraphs(content, makeMixins(mixins, flavor))
+          return `${newContent}\n\n`
+        })
+      }
     },
   }
   return plugin
