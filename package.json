@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:Jaid/vite-plugin-media-mixins.git"
+    "url": "git+https://github.com/Jaid/vite-plugin-media-mixins.git"
   },
   "scripts": {
     "test": "bun test --max-concurrency 1"
