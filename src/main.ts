@@ -5,7 +5,7 @@ import flattenString from 'flatten-string'
 
 import makeMixins from '#src/lib/makeMixins.ts'
 
-function titlePlugin() {
+function mediaMixinsPlugin() {
   const mixins = {
     narrow: 'screen and (max-width: 599px)',
     squat: 'screen and (max-height: 599px)',
@@ -26,6 +26,6 @@ function titlePlugin() {
   return plugin
 }
 
-export const makeTitlePlugin = titlePlugin
+export const makeMediaMixinsPlugin = mediaMixinsPlugin
 
-export default makeTitlePlugin()
+export default makeMediaMixinsPlugin()
