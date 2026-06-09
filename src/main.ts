@@ -61,6 +61,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const defaultTheme = options?.defaultTheme ?? 'dark'
   const squareCategory = options?.squareCategory ?? 'portrait'
   const easing = options?.easing ?? 'sine'
+  const easingSide = options?.easingSide ?? 'large'
   const flavors = options?.flavors ?? ['scss', 'sass']
   const wideWidthString = `${wideWidth}px`
   const tallHeightString = `${tallHeight}px`
@@ -90,15 +91,31 @@ const mediaMixinsPlugin = (options?: Options) => {
     defaultMixins.landscape = '(min-aspect-ratio: 1)'
     defaultMixins.portrait = `not (${defaultMixins.landscape})`
   }
-  const tNarrow = `(($normalSensitivityRadius * ${wideWidthString} + ${wideWidthString}) - 100vw) / ($normalSensitivityRadius * 2 * ${wideWidthString})`
-  const tWide = `(100vw - (${wideWidthString} - $normalSensitivityRadius * ${wideWidthString})) / ($normalSensitivityRadius * 2 * ${wideWidthString})`
-  const tSquat = `(($normalSensitivityRadius * ${tallHeightString} + ${tallHeightString}) - 100vh) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
-  const tTall = `(100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
-  const ease = (t: string) => {
+  let tweeningNarrow: string
+  let tweeningWide: string
+  let tweeningSquat: string
+  let tweeningTall: string
+  if (easingSide === 'center') {
+    tweeningNarrow = `(($normalSensitivityRadius * ${wideWidthString} + ${wideWidthString}) - 100vw) / ($normalSensitivityRadius * 2 * ${wideWidthString})`
+    tweeningWide = `(100vw - (${wideWidthString} - $normalSensitivityRadius * ${wideWidthString})) / ($normalSensitivityRadius * 2 * ${wideWidthString})`
+    tweeningSquat = `(($normalSensitivityRadius * ${tallHeightString} + ${tallHeightString}) - 100vh) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
+    tweeningTall = `(100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
+  } else if (easingSide === 'large') {
+    tweeningNarrow = `(($normalSensitivityRadius * ${wideWidthString} + ${wideWidthString}) - 100vw) / ($normalSensitivityRadius * ${wideWidthString})`
+    tweeningWide = `(100vw - ${wideWidthString}) / ($normalSensitivityRadius * ${wideWidthString})`
+    tweeningSquat = `(($normalSensitivityRadius * ${tallHeightString} + ${tallHeightString}) - 100vh) / ($normalSensitivityRadius * ${tallHeightString})`
+    tweeningTall = `(100vh - ${tallHeightString}) / ($normalSensitivityRadius * ${tallHeightString})`
+  } else {
+    tweeningNarrow = `(${wideWidthString} - 100vw) / ($normalSensitivityRadius * ${wideWidthString})`
+    tweeningWide = `(100vw - (${wideWidthString} - $normalSensitivityRadius * ${wideWidthString})) / ($normalSensitivityRadius * ${wideWidthString})`
+    tweeningSquat = `(${tallHeightString} - 100vh) / ($normalSensitivityRadius * ${tallHeightString})`
+    tweeningTall = `(100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / ($normalSensitivityRadius * ${tallHeightString})`
+  }
+  const ease = (tweeningPosition: string) => {
     if (easing === 'sine') {
-      return `((1 - cos(3.14 * clamp(0, ${t}, 1))) / 2)`
+      return `((1 - cos(3.14 * clamp(0, ${tweeningPosition}, 1))) / 2)`
     }
-    return t
+    return tweeningPosition
   }
   const defaultFunctions: Record<string, FunctionDef> = {
     toNarrow: {
@@ -125,7 +142,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${ease(tNarrow)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tweeningNarrow)}, $upperSection);`,
       ],
     },
     toWide: {
@@ -152,7 +169,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${ease(tWide)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tweeningWide)}, $upperSection);`,
       ],
     },
     toSquat: {
@@ -179,7 +196,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${ease(tSquat)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tweeningSquat)}, $upperSection);`,
       ],
     },
     toTall: {
@@ -206,7 +223,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${ease(tTall)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tweeningTall)}, $upperSection);`,
       ],
     },
   }

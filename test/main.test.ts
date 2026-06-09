@@ -18,8 +18,8 @@ test('generates scss mixins and body-based functions with defaults', () => {
   expect(additionalData).toBeString()
   expect(additionalData).toContain('@mixin narrow')
   expect(additionalData).toContain('@mixin wide')
-  expect(additionalData).toContain('@function toNarrow($from: 0, $to: 1, $sensitivityRadius: 10) {')
-  expect(additionalData).toContain('@function toWide($from: 0, $to: 1, $sensitivityRadius: 10) {')
+  expect(additionalData).toContain('@function toNarrow($from: 0, $to: 1, $sensitivityRadius: 20) {')
+  expect(additionalData).toContain('@function toWide($from: 0, $to: 1, $sensitivityRadius: 20) {')
   expect(additionalData).toContain('@if $from == null and $to == null')
   expect(additionalData).toContain('@if $to == null')
   expect(additionalData).toContain('$normalSensitivityRadius * 600px')
@@ -33,7 +33,7 @@ test('generates sass mixins and body-based functions', () => {
   const additionalData = getSassAdditionalData(config)
   expect(additionalData).toBeString()
   expect(additionalData).toContain('@mixin narrow')
-  expect(additionalData).toContain('@function toNarrow($from: 0, $to: 1, $sensitivityRadius: 10)\n')
+  expect(additionalData).toContain('@function toNarrow($from: 0, $to: 1, $sensitivityRadius: 20)\n')
   expect(additionalData).toContain('@if $from == null and $to == null')
   expect(additionalData).toContain('$normalSensitivityRadius * 600px')
 })
@@ -50,26 +50,24 @@ test('respects custom wideWidth and sensitivityRadius', () => {
   expect(additionalData).toContain('$normalSensitivityRadius * 800px')
   expect(additionalData).toContain('$sensitivityRadius: 40')
 })
-test('generates linear easing by default (no cos wrapping)', () => {
+test('generates sine easing by default (cos wrapping)', () => {
   const plugin = vitePluginMediaMixins({flavors: ['scss']})
   const config: UserConfig = {}
   ;(plugin.config as (config: UserConfig) => void)(config)
   const additionalData = getScssAdditionalData(config)
-  // t is bare, not wrapped in (1 - cos(pi * ...)) / 2
-  expect(additionalData).toContain('(($normalSensitivityRadius * 600px + 600px) - 100vw) / ($normalSensitivityRadius * 2 * 600px)')
-  expect(additionalData).not.toContain('cos(pi *')
+  // t is wrapped in (1 - cos(3.14 * ...)) / 2
+  expect(additionalData).toContain('(1 - cos(3.14 *')
+  expect(additionalData).toContain('/ 2)')
 })
-test('generates sine easing when configured', () => {
+test('generates linear easing when configured', () => {
   const plugin = vitePluginMediaMixins({
     flavors: ['scss'],
-    easing: 'sine',
+    easing: 'linear',
   })
   const config: UserConfig = {}
   ;(plugin.config as (config: UserConfig) => void)(config)
   const additionalData = getScssAdditionalData(config)
-  // t is wrapped in (1 - cos(pi * t)) / 2
-  expect(additionalData).toContain('(1 - cos(pi *')
-  expect(additionalData).toContain('/ 2)')
-  // Keeps the original denormalizer for t inside the cos
+  // t is bare, not wrapped in (1 - cos(3.14 * ...)) / 2
+  expect(additionalData).not.toContain('(1 - cos(')
   expect(additionalData).toContain('$normalSensitivityRadius * 600px')
 })

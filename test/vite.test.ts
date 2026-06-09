@@ -133,21 +133,22 @@ test('build respects custom wideWidth and tallHeight', async () => {
   expect(css).toContain('@media screen and not (min-width: 800px)')
   expect(css).toContain('@media screen and (min-width: 800px)')
   // tallHeight (900) appears in toSquat/toTall clamp expressions
-  // (normalSensitivityRadius * tallHeight + tallHeight) = 0.1 * 900 + 900 = 990
-  // (tallHeight - normalSensitivityRadius * tallHeight) = 900 - 90 = 810
-  expect(css).toContain('990px')
-  expect(css).toContain('810px')
+  // easingSide='large', sensitivityRadius=20 → normalSensitivityRadius=0.2
+  // toSquat: ((0.2 * 900 + 900) - 100vh) / (0.2 * 900) = (1080px - 100vh) / 180px
+  // toTall: (100vh - 900) / (0.2 * 900) = (100vh - 900px) / 180px
+  expect(css).toContain('1080px')
+  expect(css).toContain('900px')
   expect(css).toContain('100vh')
   // wideWidth (800) appears in toNarrow/toWide clamp expressions
-  // (normalSensitivityRadius * wideWidth + wideWidth) = 0.1 * 800 + 800 = 880
-  // (wideWidth - normalSensitivityRadius * wideWidth) = 800 - 80 = 720
-  expect(css).toContain('880px')
-  expect(css).toContain('720px')
+  // toNarrow: ((0.2 * 800 + 800) - 100vw) / (0.2 * 800) = (960px - 100vw) / 160px
+  // toWide: (100vw - 800) / (0.2 * 800) = (100vw - 800px) / 160px
+  expect(css).toContain('960px')
+  expect(css).toContain('800px')
 })
 test('build respects sensitivityRadius', async () => {
   const {css} = await buildAndReadCss({pluginOptions: {sensitivityRadius: 40}})
-  // denominator = normalSensitivityRadius * 2 * wideWidth = 0.4 * 2 * 600 = 480px
-  expect(css).toContain('/ 480px,')
+  // easingSide='large' → denominator = normalSensitivityRadius * wideWidth = 0.4 * 600 = 240px
+  expect(css).toContain('/ 240px,')
 })
 test('build generates dark/light mixins correctly for light default theme', async () => {
   const {css} = await buildAndReadCss({
@@ -293,18 +294,18 @@ test('toWide with explicit sensitivityRadius param', async () => {
   margin: toWide(0px, 100px, 50);
 }`,
   })
-  // sensitivityRadius: 50 → denominator = 0.5 * 2 * 600 = 600px
-  expect(css).toContain('/ 600px,')
+  // sensitivityRadius: 50 → normalSensitivityRadius=0.5, easingSide='large' → denominator = 0.5 * 600 = 300px
+  expect(css).toContain('/ 300px,')
 })
-test('build uses linear easing by default (no cos in output)', async () => {
+test('build uses sine easing by default (cos in output)', async () => {
   const {css} = await buildAndReadCss()
-  expect(css).not.toContain('cos(')
+  expect(css).toContain('cos(')
 })
 test('build uses sine easing when configured', async () => {
   const {css} = await buildAndReadCss({pluginOptions: {easing: 'sine'}})
-  // Should contain cos(pi * ...) / 2 pattern
+  // Should contain cos(3.14 * ...) / 2 pattern
   expect(css).toContain('cos(')
-  expect(css).toContain('3.14159')
+  expect(css).toContain('3.14')
 })
 test('all static utility mixins expand correctly', async () => {
   const {css} = await buildAndReadCss({
