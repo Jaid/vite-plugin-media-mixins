@@ -21,7 +21,7 @@ type Options = {
   mixins?: StringDict
   /**
    * width (in percent) of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
-   * @default 20
+   * @default 10
    */
   sensitivityRadius?: number
   /**
@@ -44,7 +44,7 @@ type Options = {
 const mediaMixinsPlugin = (options?: Options) => {
   const wideWidth = options?.wideWidth ?? 600
   const tallHeight = options?.tallHeight ?? 600
-  const sensitivityRadius = options?.sensitivityRadius ?? 20
+  const sensitivityRadius = options?.sensitivityRadius ?? 10
   const defaultTheme = options?.defaultTheme ?? 'dark'
   const squareCategory = options?.squareCategory ?? 'portrait'
   const flavors = options?.flavors ?? ['scss', 'sass']
