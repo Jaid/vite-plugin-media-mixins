@@ -15,6 +15,11 @@ type Options = {
    */
   defaultTheme?: 'dark' | 'light'
   /**
+   * easing curve for interpolation functions
+   * @default 'linear'
+   */
+  easing?: 'linear' | 'sine'
+  /**
    * @default ['scss', 'sass']
    */
   flavors?: Array<'sass' | 'scss'>
@@ -47,6 +52,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const sensitivityRadius = options?.sensitivityRadius ?? 10
   const defaultTheme = options?.defaultTheme ?? 'dark'
   const squareCategory = options?.squareCategory ?? 'portrait'
+  const easing = options?.easing ?? 'linear'
   const flavors = options?.flavors ?? ['scss', 'sass']
   const wideWidthString = `${wideWidth}px`
   const tallHeightString = `${tallHeight}px`
@@ -76,6 +82,16 @@ const mediaMixinsPlugin = (options?: Options) => {
     defaultMixins.landscape = '(min-aspect-ratio: 1)'
     defaultMixins.portrait = `not (${defaultMixins.landscape})`
   }
+  const tNarrow = `(($normalSensitivityRadius * ${wideWidthString} + ${wideWidthString}) - 100vw) / ($normalSensitivityRadius * 2 * ${wideWidthString})`
+  const tWide = `(100vw - (${wideWidthString} - $normalSensitivityRadius * ${wideWidthString})) / ($normalSensitivityRadius * 2 * ${wideWidthString})`
+  const tSquat = `(($normalSensitivityRadius * ${tallHeightString} + ${tallHeightString}) - 100vh) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
+  const tTall = `(100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
+  const makeEased = (t: string) => {
+    if (easing === 'sine') {
+      return `((1 - cos(pi * (${t}))) / 2)`
+    }
+    return t
+  }
   const defaultFunctions: Record<string, FunctionDef> = {
     toNarrow: {
       parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
@@ -87,6 +103,12 @@ const mediaMixinsPlugin = (options?: Options) => {
         '@if $to == null {',
         '  $to: 0;',
         '}',
+        '@if math.is-unitless($from) {',
+        '  $from: #{$from}px;',
+        '}',
+        '@if math.is-unitless($to) {',
+        '  $to: #{$to}px;',
+        '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
         '$scaler: calc($to - $from);',
@@ -95,7 +117,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * (($normalSensitivityRadius * ${wideWidthString} + ${wideWidthString}) - 100vw) / ($normalSensitivityRadius * 2 * ${wideWidthString}), $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tNarrow)}, $upperSection);`,
       ],
     },
     toWide: {
@@ -108,6 +130,12 @@ const mediaMixinsPlugin = (options?: Options) => {
         '@if $to == null {',
         '  $to: 0;',
         '}',
+        '@if math.is-unitless($from) {',
+        '  $from: #{$from}px;',
+        '}',
+        '@if math.is-unitless($to) {',
+        '  $to: #{$to}px;',
+        '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
         '$scaler: calc($to - $from);',
@@ -116,7 +144,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * (100vw - (${wideWidthString} - $normalSensitivityRadius * ${wideWidthString})) / ($normalSensitivityRadius * 2 * ${wideWidthString}), $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tWide)}, $upperSection);`,
       ],
     },
     toSquat: {
@@ -129,6 +157,12 @@ const mediaMixinsPlugin = (options?: Options) => {
         '@if $to == null {',
         '  $to: 0;',
         '}',
+        '@if math.is-unitless($from) {',
+        '  $from: #{$from}px;',
+        '}',
+        '@if math.is-unitless($to) {',
+        '  $to: #{$to}px;',
+        '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
         '$scaler: calc($to - $from);',
@@ -137,7 +171,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * (($normalSensitivityRadius * ${tallHeightString} + ${tallHeightString}) - 100vh) / ($normalSensitivityRadius * 2 * ${tallHeightString}), $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tSquat)}, $upperSection);`,
       ],
     },
     toTall: {
@@ -150,6 +184,12 @@ const mediaMixinsPlugin = (options?: Options) => {
         '@if $to == null {',
         '  $to: 0;',
         '}',
+        '@if math.is-unitless($from) {',
+        '  $from: #{$from}px;',
+        '}',
+        '@if math.is-unitless($to) {',
+        '  $to: #{$to}px;',
+        '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
         '$scaler: calc($to - $from);',
@@ -158,7 +198,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * (100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / ($normalSensitivityRadius * 2 * ${tallHeightString}), $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tTall)}, $upperSection);`,
       ],
     },
   }
