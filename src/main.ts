@@ -1,9 +1,11 @@
+import type {FunctionDef} from '#src/lib/makeFunctions.ts'
 import type {StringDict} from 'more-types'
 import type {Plugin} from 'vite'
 
 import {update} from 'es-toolkit/compat'
 import flattenString from 'flatten-string'
 
+import makeFunctions from '#src/lib/makeFunctions.ts'
 import makeMixins from '#src/lib/makeMixins.ts'
 
 type Options = {
@@ -28,6 +30,11 @@ type Options = {
    */
   tallHeight?: number
   /**
+   * width of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
+   * @default 20
+   */
+  transitionZone?: number
+  /**
    * minimum amount of pixels that enables “wide” and disables “narrow”
    * @default 600
    */
@@ -37,6 +44,7 @@ type Options = {
 const mediaMixinsPlugin = (options?: Options) => {
   const wideWidth = options?.wideWidth ?? 600
   const tallHeight = options?.tallHeight ?? 600
+  const transitionZone = options?.transitionZone ?? 20
   const defaultTheme = options?.defaultTheme ?? 'dark'
   const squareCategory = options?.squareCategory ?? 'portrait'
   const flavors = options?.flavors ?? ['scss', 'sass']
@@ -66,6 +74,32 @@ const mediaMixinsPlugin = (options?: Options) => {
     defaultMixins.landscape = '(min-aspect-ratio: 1)'
     defaultMixins.portrait = `not (${defaultMixins.landscape})`
   }
+  const narrowEnd = wideWidth - transitionZone / 2
+  const wideStart = wideWidth + transitionZone / 2
+  const squatEnd = tallHeight - transitionZone / 2
+  const tallStart = tallHeight + transitionZone / 2
+  const ratioNarrow = `clamp(0, calc(${wideStart}px - 100vw) / ${transitionZone}, 1)`
+  const ratioWide = `clamp(0, calc(100vw - ${narrowEnd}px) / ${transitionZone}, 1)`
+  const ratioSquat = `clamp(0, calc(${tallStart}px - 100vh) / ${transitionZone}, 1)`
+  const ratioTall = `clamp(0, calc(100vh - ${squatEnd}px) / ${transitionZone}, 1)`
+  const defaultFunctions: Record<string, FunctionDef> = {
+    toNarrow: {
+      parameters: ['$from: 0', '$to: 1'],
+      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioNarrow})`,
+    },
+    toWide: {
+      parameters: ['$from: 0', '$to: 1'],
+      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioWide})`,
+    },
+    toSquat: {
+      parameters: ['$from: 0', '$to: 1'],
+      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioSquat})`,
+    },
+    toTall: {
+      parameters: ['$from: 0', '$to: 1'],
+      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioTall})`,
+    },
+  }
   const mixins = {
     ...options?.mixins || defaultMixins,
     ...options?.additionalMixins,
@@ -74,9 +108,12 @@ const mediaMixinsPlugin = (options?: Options) => {
     name: 'media-mixins',
     config(config) {
       for (const flavor of flavors) {
+        const mixinCode = makeMixins(mixins, flavor)
+        const functionCode = makeFunctions(defaultFunctions, flavor)
+        const newContent = flattenString.paragraphs([mixinCode, functionCode])
         update(config, `css.preprocessorOptions.${flavor}.additionalData`, content => {
-          const newContent = flattenString.paragraphs(content, makeMixins(mixins, flavor))
-          return `${newContent}\n\n`
+          const combined = flattenString.paragraphs(content, newContent)
+          return `${combined}\n\n`
         })
       }
     },
