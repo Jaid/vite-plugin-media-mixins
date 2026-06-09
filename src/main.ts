@@ -16,7 +16,7 @@ type Options = {
   defaultTheme?: 'dark' | 'light'
   /**
    * easing curve for interpolation functions
-   * @default 'linear'
+   * @default 'sine'
    */
   easing?: 'linear' | 'sine'
   /**
@@ -52,7 +52,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const sensitivityRadius = options?.sensitivityRadius ?? 10
   const defaultTheme = options?.defaultTheme ?? 'dark'
   const squareCategory = options?.squareCategory ?? 'portrait'
-  const easing = options?.easing ?? 'linear'
+  const easing = options?.easing ?? 'sine'
   const flavors = options?.flavors ?? ['scss', 'sass']
   const wideWidthString = `${wideWidth}px`
   const tallHeightString = `${tallHeight}px`
@@ -88,7 +88,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const tTall = `(100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
   const makeEased = (t: string) => {
     if (easing === 'sine') {
-      return `((1 - cos(pi * (${t}))) / 2)`
+      return `((1 - cos(3.14 * clamp(0, ${t}, 1))) / 2)`
     }
     return t
   }
@@ -104,10 +104,10 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $to: 0;',
         '}',
         '@if math.is-unitless($from) {',
-        '  $from: #{$from}px;',
+        '  $from: $from * 1px;',
         '}',
         '@if math.is-unitless($to) {',
-        '  $to: #{$to}px;',
+        '  $to: $to * 1px;',
         '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
@@ -131,10 +131,10 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $to: 0;',
         '}',
         '@if math.is-unitless($from) {',
-        '  $from: #{$from}px;',
+        '  $from: $from * 1px;',
         '}',
         '@if math.is-unitless($to) {',
-        '  $to: #{$to}px;',
+        '  $to: $to * 1px;',
         '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
@@ -158,10 +158,10 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $to: 0;',
         '}',
         '@if math.is-unitless($from) {',
-        '  $from: #{$from}px;',
+        '  $from: $from * 1px;',
         '}',
         '@if math.is-unitless($to) {',
-        '  $to: #{$to}px;',
+        '  $to: $to * 1px;',
         '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
@@ -185,10 +185,10 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $to: 0;',
         '}',
         '@if math.is-unitless($from) {',
-        '  $from: #{$from}px;',
+        '  $from: $from * 1px;',
         '}',
         '@if math.is-unitless($to) {',
-        '  $to: #{$to}px;',
+        '  $to: $to * 1px;',
         '}',
         '$lowerSection: min($from, $to);',
         '$upperSection: max($from, $to);',
