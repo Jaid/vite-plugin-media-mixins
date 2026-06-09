@@ -1,29 +1,26 @@
-import type {XOR} from 'ts-xor'
-import type {Arrayable} from 'type-fest'
+import type {Arrayable, RequireExactlyOne} from 'type-fest'
 
 import flattenString from 'flatten-string'
 
-export type FunctionDef = {
-  parameters?: Arrayable<string>
-} & XOR<{
-  expression: string
-}, {
+export type FunctionDef = RequireExactlyOne<{
   body: Array<string>
-}>
+  expression: string
+  parameters?: Arrayable<string>
+}, 'body' | 'expression'>
 
 const makeFunction = (name: string, def: FunctionDef, flavor: 'sass' | 'scss') => {
   let params = ''
   if (def.parameters) {
     params = flattenString.list(def.parameters)
   }
-  if ('expression' in def) {
+  if (def.expression) {
     if (flavor === 'sass') {
       return `@function ${name}(${params})\n  @return ${def.expression.replace(/;$/, '')}`
     }
     return `@function ${name}(${params}) {\n  @return ${def.expression};\n}`
   }
   if (flavor === 'sass') {
-    const body = def.body.map(line => {
+    const body = def.body!.map(line => {
       const trimmed = line.trimEnd()
       if (trimmed === '}') {
         return ''
@@ -38,7 +35,7 @@ const makeFunction = (name: string, def: FunctionDef, flavor: 'sass' | 'scss') =
     }).filter(line => line !== '').map(line => `  ${line}`).join('\n')
     return `@function ${name}(${params})\n${body}`
   }
-  const body = def.body.map(line => `  ${line}`).join('\n')
+  const body = flattenString.lines(def.body!.map(line => `  ${line}`))
   return `@function ${name}(${params}) {\n${body}\n}`
 }
 
