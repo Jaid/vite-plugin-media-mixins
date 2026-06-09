@@ -119,7 +119,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   }
   const defaultFunctions: Record<string, FunctionDef> = {
     toNarrow: {
-      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      parameters: ['$from: null', '$to: null', `$sensitivityRadius: ${sensitivityRadius}`],
       body: [
         '@if $from == null and $to == null {',
         '  $from: 0;',
@@ -140,7 +140,7 @@ const mediaMixinsPlugin = (options?: Options) => {
       ],
     },
     toWide: {
-      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      parameters: ['$from: null', '$to: null', `$sensitivityRadius: ${sensitivityRadius}`],
       body: [
         '@if $from == null and $to == null {',
         '  $from: 0;',
@@ -161,7 +161,7 @@ const mediaMixinsPlugin = (options?: Options) => {
       ],
     },
     toSquat: {
-      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      parameters: ['$from: null', '$to: null', `$sensitivityRadius: ${sensitivityRadius}`],
       body: [
         '@if $from == null and $to == null {',
         '  $from: 0;',
@@ -182,7 +182,7 @@ const mediaMixinsPlugin = (options?: Options) => {
       ],
     },
     toTall: {
-      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      parameters: ['$from: null', '$to: null', `$sensitivityRadius: ${sensitivityRadius}`],
       body: [
         '@if $from == null and $to == null {',
         '  $from: 0;',
