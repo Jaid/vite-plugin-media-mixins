@@ -172,8 +172,9 @@ const mediaMixinsPlugin = (options?: Options) => {
       for (const flavor of flavors) {
         const mixinCode = makeMixins(mixins, flavor)
         const functionCode = makeFunctions(defaultFunctions, flavor)
+        const header = flavor === 'sass' ? "@use 'sass:math'" : '@use "sass:math";'
         update(config, `css.preprocessorOptions.${flavor}.additionalData`, content => {
-          const combined = flattenString.paragraphs(content, mixinCode, functionCode)
+          const combined = flattenString.paragraphs(header, content, mixinCode, functionCode)
           return `${combined}\n`
         })
       }
