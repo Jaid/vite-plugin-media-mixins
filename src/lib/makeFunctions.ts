@@ -26,7 +26,11 @@ const makeFunction = (name: string, def: FunctionDef, flavor: 'sass' | 'scss') =
         return ''
       }
       if (trimmed.endsWith('{')) {
-        return trimmed.slice(0, -1).trimEnd()
+        let result = trimmed.slice(0, -1).trimEnd()
+        if (result.startsWith('}')) {
+          result = result.slice(1).trimStart()
+        }
+        return result
       }
       if (trimmed.endsWith(';')) {
         return trimmed.slice(0, -1).trimEnd()
