@@ -20,13 +20,21 @@ type Options = {
    */
   easing?: 'linear' | 'sine'
   /**
+   * where to put the window of interpolation when the viewport changes
+   * `'center'`: half before and half after the breakpoint
+   * `'large'`: all the interpolation sits on the large side, so the animation is finished at the exact moment of reaching the breakpoint while the viewport shrinks
+   * `'small'`: all the interpolation sits on the small side, so the animation is finished at the exact moment of reaching the breakpoint while the viewport grows
+   * @default 'large'
+   */
+  easingSide?: 'center' | 'large' | 'small'
+  /**
    * @default ['scss', 'sass']
    */
   flavors?: Array<'sass' | 'scss'>
   mixins?: StringDict
   /**
    * width (in percent) of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
-   * @default 10
+   * @default 20
    */
   sensitivityRadius?: number
   /**
@@ -49,7 +57,7 @@ type Options = {
 const mediaMixinsPlugin = (options?: Options) => {
   const wideWidth = options?.wideWidth ?? 600
   const tallHeight = options?.tallHeight ?? 600
-  const sensitivityRadius = options?.sensitivityRadius ?? 10
+  const sensitivityRadius = options?.sensitivityRadius ?? 20
   const defaultTheme = options?.defaultTheme ?? 'dark'
   const squareCategory = options?.squareCategory ?? 'portrait'
   const easing = options?.easing ?? 'sine'
@@ -86,7 +94,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const tWide = `(100vw - (${wideWidthString} - $normalSensitivityRadius * ${wideWidthString})) / ($normalSensitivityRadius * 2 * ${wideWidthString})`
   const tSquat = `(($normalSensitivityRadius * ${tallHeightString} + ${tallHeightString}) - 100vh) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
   const tTall = `(100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / ($normalSensitivityRadius * 2 * ${tallHeightString})`
-  const makeEased = (t: string) => {
+  const ease = (t: string) => {
     if (easing === 'sine') {
       return `((1 - cos(3.14 * clamp(0, ${t}, 1))) / 2)`
     }
@@ -117,7 +125,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tNarrow)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tNarrow)}, $upperSection);`,
       ],
     },
     toWide: {
@@ -144,7 +152,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tWide)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tWide)}, $upperSection);`,
       ],
     },
     toSquat: {
@@ -171,7 +179,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tSquat)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tSquat)}, $upperSection);`,
       ],
     },
     toTall: {
@@ -198,7 +206,7 @@ const mediaMixinsPlugin = (options?: Options) => {
         '  $upperSection: max($from, $to);',
         '}',
         '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
-        `@return clamp($lowerSection, $from + $scaler * ${makeEased(tTall)}, $upperSection);`,
+        `@return clamp($lowerSection, $from + $scaler * ${ease(tTall)}, $upperSection);`,
       ],
     },
   }
