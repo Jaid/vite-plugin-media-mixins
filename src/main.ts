@@ -20,6 +20,11 @@ type Options = {
   flavors?: Array<'sass' | 'scss'>
   mixins?: StringDict
   /**
+   * width (in percent) of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
+   * @default 20
+   */
+  sensitivityRadius?: number
+  /**
    * what category to snap to when the aspect ratio is exactly 1:1
    * @default 'portrait'
    */
@@ -30,11 +35,6 @@ type Options = {
    */
   tallHeight?: number
   /**
-   * width of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
-   * @default 20
-   */
-  transitionZone?: number
-  /**
    * minimum amount of pixels that enables “wide” and disables “narrow”
    * @default 600
    */
@@ -44,15 +44,17 @@ type Options = {
 const mediaMixinsPlugin = (options?: Options) => {
   const wideWidth = options?.wideWidth ?? 600
   const tallHeight = options?.tallHeight ?? 600
-  const transitionZone = options?.transitionZone ?? 20
+  const sensitivityRadius = options?.sensitivityRadius ?? 20
   const defaultTheme = options?.defaultTheme ?? 'dark'
   const squareCategory = options?.squareCategory ?? 'portrait'
   const flavors = options?.flavors ?? ['scss', 'sass']
+  const wideWidthString = `${wideWidth}px`
+  const tallHeightString = `${tallHeight}px`
   const defaultMixins: StringDict = {
-    narrow: `screen and not (min-width: ${wideWidth}px)`,
-    wide: `screen and (min-width: ${wideWidth}px)`,
-    squat: `screen and not (min-height: ${tallHeight}px)`,
-    tall: `screen and (min-height: ${tallHeight}px)`,
+    narrow: `screen and not (min-width: ${wideWidthString})`,
+    wide: `screen and (min-width: ${wideWidthString})`,
+    squat: `screen and not (min-height: ${tallHeightString})`,
+    tall: `screen and (min-height: ${tallHeightString})`,
     static: '(prefers-reduced-motion: reduce)',
     hover: '(hover: hover)',
     aboveSrgb: '(color-gamut: p3) or (color-gamut: rec2020)',
@@ -74,30 +76,94 @@ const mediaMixinsPlugin = (options?: Options) => {
     defaultMixins.landscape = '(min-aspect-ratio: 1)'
     defaultMixins.portrait = `not (${defaultMixins.landscape})`
   }
-  const narrowEnd = wideWidth - transitionZone / 2
-  const wideStart = wideWidth + transitionZone / 2
-  const squatEnd = tallHeight - transitionZone / 2
-  const tallStart = tallHeight + transitionZone / 2
-  const ratioNarrow = `clamp(0, calc(${wideStart}px - 100vw) / ${transitionZone}, 1)`
-  const ratioWide = `clamp(0, calc(100vw - ${narrowEnd}px) / ${transitionZone}, 1)`
-  const ratioSquat = `clamp(0, calc(${tallStart}px - 100vh) / ${transitionZone}, 1)`
-  const ratioTall = `clamp(0, calc(100vh - ${squatEnd}px) / ${transitionZone}, 1)`
   const defaultFunctions: Record<string, FunctionDef> = {
     toNarrow: {
-      parameters: ['$from: 0', '$to: 1'],
-      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioNarrow})`,
+      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      body: [
+        '@if $from == null and $to == null {',
+        '  $from: 0;',
+        '  $to: 1;',
+        '}',
+        '@if $to == null {',
+        '  $to: 0;',
+        '}',
+        '$lowerSection: min($from, $to);',
+        '$upperSection: max($from, $to);',
+        '$scaler: calc($to - $from);',
+        '@if comparable($from, $to) {',
+        '  $lowerSection: min($from, $to);',
+        '  $upperSection: max($from, $to);',
+        '}',
+        '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
+        '$sensitivityDiameter: $sensitivityRadius * 2;',
+        `@return clamp($lowerSection, $from + $scaler * (($normalSensitivityRadius * ${wideWidthString} + ${wideWidthString}) - 100vw) / $sensitivityDiameter, $upperSection);`,
+      ],
     },
     toWide: {
-      parameters: ['$from: 0', '$to: 1'],
-      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioWide})`,
+      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      body: [
+        '@if $from == null and $to == null {',
+        '  $from: 0;',
+        '  $to: 1;',
+        '}',
+        '@if $to == null {',
+        '  $to: 0;',
+        '}',
+        '$lowerSection: min($from, $to);',
+        '$upperSection: max($from, $to);',
+        '$scaler: calc($to - $from);',
+        '@if comparable($from, $to) {',
+        '  $lowerSection: min($from, $to);',
+        '  $upperSection: max($from, $to);',
+        '}',
+        '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
+        '$sensitivityDiameter: $sensitivityRadius * 2;',
+        `@return clamp($lowerSection, $from + $scaler * (100vw - (${wideWidthString} - $normalSensitivityRadius * ${wideWidthString})) / $sensitivityDiameter, $upperSection);`,
+      ],
     },
     toSquat: {
-      parameters: ['$from: 0', '$to: 1'],
-      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioSquat})`,
+      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      body: [
+        '@if $from == null and $to == null {',
+        '  $from: 0;',
+        '  $to: 1;',
+        '}',
+        '@if $to == null {',
+        '  $to: 0;',
+        '}',
+        '$lowerSection: min($from, $to);',
+        '$upperSection: max($from, $to);',
+        '$scaler: calc($to - $from);',
+        '@if comparable($from, $to) {',
+        '  $lowerSection: min($from, $to);',
+        '  $upperSection: max($from, $to);',
+        '}',
+        '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
+        '$sensitivityDiameter: $sensitivityRadius * 2;',
+        `@return clamp($lowerSection, $from + $scaler * (($normalSensitivityRadius * ${tallHeightString} + ${tallHeightString}) - 100vh) / $sensitivityDiameter, $upperSection);`,
+      ],
     },
     toTall: {
-      parameters: ['$from: 0', '$to: 1'],
-      expression: `calc(#{$from} + (#{$to} - #{$from}) * ${ratioTall})`,
+      parameters: ['$from: 0', '$to: 1', `$sensitivityRadius: ${sensitivityRadius}`],
+      body: [
+        '@if $from == null and $to == null {',
+        '  $from: 0;',
+        '  $to: 1;',
+        '}',
+        '@if $to == null {',
+        '  $to: 0;',
+        '}',
+        '$lowerSection: min($from, $to);',
+        '$upperSection: max($from, $to);',
+        '$scaler: calc($to - $from);',
+        '@if comparable($from, $to) {',
+        '  $lowerSection: min($from, $to);',
+        '  $upperSection: max($from, $to);',
+        '}',
+        '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
+        '$sensitivityDiameter: $sensitivityRadius * 2;',
+        `@return clamp($lowerSection, $from + $scaler * (100vh - (${tallHeightString} - $normalSensitivityRadius * ${tallHeightString})) / $sensitivityDiameter, $upperSection);`,
+      ],
     },
   }
   const mixins = {

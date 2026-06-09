@@ -1,19 +1,45 @@
+import type {XOR} from 'ts-xor'
+import type {Arrayable} from 'type-fest'
+
 import flattenString from 'flatten-string'
 
 export type FunctionDef = {
+  parameters?: Arrayable<string>
+} & XOR<{
   expression: string
-  parameters?: Array<string> | string
-}
+}, {
+  body: Array<string>
+}>
 
-const makeFunction = (name: string, {parameters, expression}: FunctionDef, flavor: 'sass' | 'scss') => {
+const makeFunction = (name: string, def: FunctionDef, flavor: 'sass' | 'scss') => {
   let params = ''
-  if (parameters) {
-    params = flattenString.list(parameters)
+  if (def.parameters) {
+    params = flattenString.list(def.parameters)
+  }
+  if ('expression' in def) {
+    if (flavor === 'sass') {
+      return `@function ${name}(${params})\n  @return ${def.expression.replace(/;$/, '')}`
+    }
+    return `@function ${name}(${params}) {\n  @return ${def.expression};\n}`
   }
   if (flavor === 'sass') {
-    return `@function ${name}(${params})\n  @return ${expression}`
+    const body = def.body.map(line => {
+      const trimmed = line.trimEnd()
+      if (trimmed === '}') {
+        return ''
+      }
+      if (trimmed.endsWith('{')) {
+        return trimmed.slice(0, -1).trimEnd()
+      }
+      if (trimmed.endsWith(';')) {
+        return trimmed.slice(0, -1).trimEnd()
+      }
+      return trimmed
+    }).filter(line => line !== '').map(line => `  ${line}`).join('\n')
+    return `@function ${name}(${params})\n${body}`
   }
-  return `@function ${name}(${params}) {\n  @return ${expression};\n}`
+  const body = def.body.map(line => `  ${line}`).join('\n')
+  return `@function ${name}(${params}) {\n${body}\n}`
 }
 
 export default (functions: Record<string, FunctionDef>, flavor: 'sass' | 'scss' = 'scss') => {
