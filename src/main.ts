@@ -176,10 +176,9 @@ const mediaMixinsPlugin = (options?: Options) => {
       for (const flavor of flavors) {
         const mixinCode = makeMixins(mixins, flavor)
         const functionCode = makeFunctions(defaultFunctions, flavor)
-        const newContent = flattenString.paragraphs([mixinCode, functionCode])
         update(config, `css.preprocessorOptions.${flavor}.additionalData`, content => {
-          const combined = flattenString.paragraphs(content, newContent)
-          return `${combined}\n\n`
+          const combined = flattenString.paragraphs(content, mixinCode, functionCode)
+          return `${combined}\n`
         })
       }
     },
