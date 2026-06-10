@@ -20,11 +20,15 @@ if (typeof sassData === 'string') {
   opacity: toNarrow()
   padding: toNarrow(2.5rem)
   margin: toWide(1rem, 2rem)
-  flex: toSquat(1)
-  gap: toTall(4em, 150px, 50)
+  border-radius: toSquat(50px)
+  background: hsl(toTall(360) 100% toWide(100%))
+  width: toTall(4em, 150px, 50)
   scale: toTall(0, 2)
 `
   const compiled = compileString(`${sassData}\n\n${userSass}`, {syntax: 'indented'})
   await Bun.write('temp/render/preview.css', compiled.css)
   console.log(`Written temp/render/preview.css (${Buffer.byteLength(compiled.css)} bytes)`)
+  const html = `<html><head><style>${compiled.css}</style></head><body><div>Resize the window to see the mixins in action!</div></body></html>`
+  await Bun.write('temp/render/preview.html', html)
+  console.log(`Written temp/render/preview.html (${Buffer.byteLength(html)} bytes)`)
 }

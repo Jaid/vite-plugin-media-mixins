@@ -55,9 +55,9 @@ test('generates sine easing by default (cos wrapping)', () => {
   const config: UserConfig = {}
   ;(plugin.config as (config: UserConfig) => void)(config)
   const additionalData = getScssAdditionalData(config)
-  // t is wrapped in (1 - cos(3.14 * ...)) / 2
+  // t is wrapped in (1 - cos(3.14 * ...)) * 0.5
   expect(additionalData).toContain('(1 - cos(3.14 *')
-  expect(additionalData).toContain('/ 2)')
+  expect(additionalData).toContain('* 0.5)')
 })
 test('generates linear easing when configured', () => {
   const plugin = vitePluginMediaMixins({

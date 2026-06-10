@@ -113,7 +113,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   }
   const ease = (tweeningPosition: string) => {
     if (easing === 'sine') {
-      return `((1 - cos(3.14 * clamp(0, ${tweeningPosition}, 1))) / 2)`
+      return `((1 - cos(#{pi} * clamp(0, ${tweeningPosition}, 1))) * 0.5)`
     }
     return tweeningPosition
   }
@@ -129,14 +129,7 @@ const mediaMixinsPlugin = (options?: Options) => {
       '}',
       '$lowerSection: min($from, $to);',
       '$upperSection: max($from, $to);',
-      '$scaler: null;',
-      '@if math.compatible($from, $to) {',
-      '  $lowerSection: min($from, $to);',
-      '  $upperSection: max($from, $to);',
-      '  $scaler: $to - $from;',
-      '} @else {',
-      '  $scaler: #{$to} - #{$from};',
-      '}',
+      '$scaler: calc($to - $from);',
       '$normalSensitivityRadius: $sensitivityRadius * 0.01;',
       `@return clamp($lowerSection, $from + $scaler * ${easedSegment}, $upperSection);`,
     ]
