@@ -7,7 +7,7 @@ import {transform} from 'lightningcss'
 import {compileString} from 'sass'
 
 import makeFunctions from '#src/lib/makeFunctions.ts'
-import makeMixins from '#src/lib/makeMixins.ts'
+import makeMixins from '#src/lib/makeMediaMixins.ts'
 
 type Variant = 'sass' | 'scss'
 

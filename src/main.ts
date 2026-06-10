@@ -1,12 +1,16 @@
 import type {FunctionDef} from '#src/lib/makeFunctions.ts'
-import type {StringDict} from 'more-types'
+import type {Dict, StringDict} from 'more-types'
 import type {Plugin} from 'vite'
 
 import {update} from 'es-toolkit/compat'
 import flattenString from 'flatten-string'
 
 import makeFunctions from '#src/lib/makeFunctions.ts'
-import makeMixins from '#src/lib/makeMixins.ts'
+import makeMediaMixins from '#src/lib/makeMediaMixins.ts'
+
+type MixinDef = {
+  body: Array<string>
+} | string
 
 type Options = {
   additionalMixins?: StringDict
@@ -32,6 +36,14 @@ type Options = {
    */
   flavors?: Array<'sass' | 'scss'>
   mixins?: StringDict
+  /**
+   * what the expressions of the `light`/`dark` mixins should be based on
+   * `media`: use the prefers-color-scheme media feature
+   * `dom`: `html[data-light]` and `html[data-dark]` selectors
+   * `both`: include both of the above, with DOM selectors listed first
+   * @default 'both'
+   */
+  schemeSource: 'both' | 'dom' | 'media'
   /**
    * width (in percent) of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
    * @default 20
@@ -65,7 +77,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const flavors = options?.flavors ?? ['scss', 'sass']
   const wideWidthString = `${wideWidth}px`
   const tallHeightString = `${tallHeight}px`
-  const defaultMixins: StringDict = {
+  const defaultMixins: Dict<MixinDef> = {
     narrow: `screen and not (min-width: ${wideWidthString})`,
     wide: `screen and (min-width: ${wideWidthString})`,
     squat: `screen and not (min-height: ${tallHeightString})`,
@@ -74,9 +86,9 @@ const mediaMixinsPlugin = (options?: Options) => {
     hover: '(hover: hover)',
     aboveSrgb: '(color-gamut: p3) or (color-gamut: rec2020)',
   }
-  defaultMixins.hoverless = `not (${defaultMixins.hover})`
-  defaultMixins.motion = `not (${defaultMixins.static})`
-  defaultMixins.srgb = `not (${defaultMixins.aboveSrgb})`
+  defaultMixins.hoverless = `not (${defaultMixins.hover as string})`
+  defaultMixins.motion = `not (${defaultMixins.static as string})`
+  defaultMixins.srgb = `not (${defaultMixins.aboveSrgb as string})`
   if (defaultTheme === 'light') {
     defaultMixins.light = '(prefers-color-scheme: light)'
     defaultMixins.dark = `not (${defaultMixins.light})`
@@ -160,7 +172,7 @@ const mediaMixinsPlugin = (options?: Options) => {
     name: 'media-mixins',
     config(config) {
       for (const flavor of flavors) {
-        const mixinCode = makeMixins(mixins, flavor)
+        const mixinCode = makeMediaMixins(mixins, flavor)
         const functionCode = makeFunctions(defaultFunctions, flavor)
         const header = flavor === 'sass' ? "@use 'sass:math'" : '@use "sass:math";'
         update(config, `css.preprocessorOptions.${flavor}.additionalData`, content => {
