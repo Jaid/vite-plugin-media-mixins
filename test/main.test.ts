@@ -55,8 +55,8 @@ test('generates sine easing by default (cos wrapping)', () => {
   const config: UserConfig = {}
   ;(plugin.config as (config: UserConfig) => void)(config)
   const additionalData = getScssAdditionalData(config)
-  // t is wrapped in (1 - cos(3.14 * ...)) * 0.5
-  expect(additionalData).toContain('(1 - cos(3.14 *')
+  // t is wrapped in (1 - cos(#{pi} * ...)) * 0.5
+  expect(additionalData).toContain('(1 - cos(#{pi} *')
   expect(additionalData).toContain('* 0.5)')
 })
 test('generates linear easing when configured', () => {
@@ -67,7 +67,7 @@ test('generates linear easing when configured', () => {
   const config: UserConfig = {}
   ;(plugin.config as (config: UserConfig) => void)(config)
   const additionalData = getScssAdditionalData(config)
-  // t is bare, not wrapped in (1 - cos(3.14 * ...)) / 2
+  // t is bare, not wrapped in (1 - cos(#{pi} * ...)) / 2
   expect(additionalData).not.toContain('(1 - cos(')
   expect(additionalData).toContain('$normalSensitivityRadius * 600px')
 })

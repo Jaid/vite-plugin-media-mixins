@@ -152,7 +152,10 @@ test('build respects sensitivityRadius', async () => {
 })
 test('build generates dark/light mixins correctly for light default theme', async () => {
   const {css} = await buildAndReadCss({
-    pluginOptions: {defaultTheme: 'light'},
+    pluginOptions: {
+      defaultTheme: 'light',
+      schemeSource: ['media'],
+    },
     scssContent: `body {
   @include light {
     color: black;
@@ -163,9 +166,27 @@ test('build generates dark/light mixins correctly for light default theme', asyn
 }`,
   })
   expect(css).toContain('@media (prefers-color-scheme: light)')
-  expect(css).toContain('@media not ((prefers-color-scheme: light))')
+  expect(css).toContain('@media not (prefers-color-scheme: light)')
 })
 test('build generates dark/light mixins correctly for dark default theme', async () => {
+  const {css} = await buildAndReadCss({
+    pluginOptions: {
+      defaultTheme: 'dark',
+      schemeSource: ['media'],
+    },
+    scssContent: `body {
+  @include light {
+    color: black;
+  }
+  @include dark {
+    color: white;
+  }
+}`,
+  })
+  expect(css).toContain('@media (prefers-color-scheme: dark)')
+  expect(css).toContain('@media not (prefers-color-scheme: dark)')
+})
+test('build generates light/dark mixins with attribute and media (default)', async () => {
   const {css} = await buildAndReadCss({
     pluginOptions: {defaultTheme: 'dark'},
     scssContent: `body {
@@ -177,8 +198,55 @@ test('build generates dark/light mixins correctly for dark default theme', async
   }
 }`,
   })
+  // Attribute selectors
+  expect(css).toContain('html[data-light]')
+  expect(css).toContain('html[data-dark]')
+  // Media queries
   expect(css).toContain('@media (prefers-color-scheme: dark)')
-  expect(css).toContain('@media not ((prefers-color-scheme: dark))')
+  expect(css).toContain('@media not (prefers-color-scheme: dark)')
+})
+test('build generates light/dark mixins with attribute only', async () => {
+  const {css} = await buildAndReadCss({
+    pluginOptions: {
+      defaultTheme: 'dark',
+      schemeSource: ['attribute'],
+    },
+    scssContent: `body {
+  @include light {
+    color: black;
+  }
+  @include dark {
+    color: white;
+  }
+}`,
+  })
+  expect(css).toContain('html[data-light]')
+  expect(css).toContain('html[data-dark]')
+  // No media queries for color scheme
+  expect(css).not.toContain('@media (prefers-color-scheme')
+  expect(css).not.toContain('@media not (prefers-color-scheme')
+})
+test('build generates light/dark mixins with class only', async () => {
+  const {css} = await buildAndReadCss({
+    pluginOptions: {
+      defaultTheme: 'dark',
+      schemeSource: ['class'],
+    },
+    scssContent: `body {
+  @include light {
+    color: black;
+  }
+  @include dark {
+    color: white;
+  }
+}`,
+  })
+  expect(css).toContain('html.light')
+  expect(css).toContain('html.dark')
+  // No attribute selectors or media queries
+  expect(css).not.toContain('html[data-')
+  expect(css).not.toContain('@media (prefers-color-scheme')
+  expect(css).not.toContain('@media not (prefers-color-scheme')
 })
 test('build generates landscape/portrait mixins correctly for portrait square category', async () => {
   const {css} = await buildAndReadCss({
@@ -303,9 +371,8 @@ test('build uses sine easing by default (cos in output)', async () => {
 })
 test('build uses sine easing when configured', async () => {
   const {css} = await buildAndReadCss({pluginOptions: {easing: 'sine'}})
-  // Should contain cos(3.14 * ...) / 2 pattern
+  // Should contain cos(pi * ...) * 0.5 pattern (Sass uses CSS math keyword pi)
   expect(css).toContain('cos(')
-  expect(css).toContain('3.14')
 })
 test('all static utility mixins expand correctly', async () => {
   const {css} = await buildAndReadCss({
@@ -356,4 +423,30 @@ test('config hook sets additionalData for multiple flavors', async () => {
   expect(config.css?.preprocessorOptions?.sass?.additionalData).toBeString()
   expect(config.css?.preprocessorOptions?.scss?.additionalData).toContain('@mixin narrow')
   expect(config.css?.preprocessorOptions?.sass?.additionalData).toContain('@mixin narrow')
+})
+test('build supports non-media mixins with body array', async () => {
+  const {css} = await buildAndReadCss({
+    pluginOptions: {
+      mixins: {
+        reset: {
+          body: [
+            '& {',
+            '  margin: 0;',
+            '  padding: 0;',
+            '  box-sizing: border-box;',
+            '}',
+          ],
+        },
+      },
+      flavors: ['scss'],
+    },
+    scssContent: `.foo {
+  @include reset;
+  color: red;
+}`,
+  })
+  expect(css).toContain('margin: 0')
+  expect(css).toContain('padding: 0')
+  expect(css).toContain('box-sizing: border-box')
+  expect(css).toContain('color: red')
 })

@@ -16,7 +16,14 @@ for (const flavor of ['sass', 'scss'] as const) {
 }
 const sassData = config.css?.preprocessorOptions?.sass?.additionalData
 if (typeof sassData === 'string') {
-  const userSass = `div
+  const userSass = `main
+  color: white
+  background: black
+  @include dark
+    color: black
+    background: white
+
+div
   opacity: toNarrow()
   padding: toNarrow(2.5rem)
   margin: toWide(1rem, 2rem)

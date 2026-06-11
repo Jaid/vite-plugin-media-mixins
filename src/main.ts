@@ -1,5 +1,7 @@
 import type {FunctionDef} from '#src/lib/makeFunctions.ts'
+import type {MixinDef} from '#src/lib/makeMediaMixins.ts'
 import type {Dict, StringDict} from 'more-types'
+import type {Arrayable} from 'type-fest'
 import type {Plugin} from 'vite'
 
 import {update} from 'es-toolkit/compat'
@@ -8,12 +10,16 @@ import flattenString from 'flatten-string'
 import makeFunctions from '#src/lib/makeFunctions.ts'
 import makeMediaMixins from '#src/lib/makeMediaMixins.ts'
 
-type MixinDef = {
-  body: Array<string>
-} | string
-
 type Options = {
   additionalMixins?: StringDict
+  /**
+   * @default 'data-dark'
+   */
+  darkAttribute: string
+  /**
+   * @default 'dark'
+   */
+  darkClass: string
   /**
    * @default 'dark'
    */
@@ -35,15 +41,27 @@ type Options = {
    * @default ['scss', 'sass']
    */
   flavors?: Array<'sass' | 'scss'>
+  /**
+   * @default 'data-light'
+   */
+  lightAttribute: string
+  /**
+   * @default 'light'
+   */
+  lightClass: string
   mixins?: StringDict
+  /**
+   * @default ':root'
+   */
+  rootElement: string
   /**
    * what the expressions of the `light`/`dark` mixins should be based on
    * `media`: use the prefers-color-scheme media feature
    * `dom`: `html[data-light]` and `html[data-dark]` selectors
-   * `both`: include both of the above, with DOM selectors listed first
-   * @default 'both'
+   * Both can be provided simultaneously, with the order determining precedence
+   * @default ['attribute', 'media']
    */
-  schemeSource: 'both' | 'dom' | 'media'
+  schemeSource: Arrayable<'attribute' | 'class' | 'media'>
   /**
    * width (in percent) of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
    * @default 20
@@ -75,6 +93,12 @@ const mediaMixinsPlugin = (options?: Options) => {
   const easing = options?.easing ?? 'sine'
   const easingSide = options?.easingSide ?? 'large'
   const flavors = options?.flavors ?? ['scss', 'sass']
+  const schemeSources: Array<'attribute' | 'class' | 'media'> = ([] as Array<'attribute' | 'class' | 'media'>).concat(options?.schemeSource ?? ['attribute', 'media'])
+  const rootElement = options?.rootElement ?? ':root'
+  const lightAttribute = options?.lightAttribute ?? 'data-light'
+  const darkAttribute = options?.darkAttribute ?? 'data-dark'
+  const lightClass = options?.lightClass ?? 'light'
+  const darkClass = options?.darkClass ?? 'dark'
   const wideWidthString = `${wideWidth}px`
   const tallHeightString = `${tallHeight}px`
   const defaultMixins: Dict<MixinDef> = {
@@ -89,12 +113,33 @@ const mediaMixinsPlugin = (options?: Options) => {
   defaultMixins.hoverless = `not (${defaultMixins.hover as string})`
   defaultMixins.motion = `not (${defaultMixins.static as string})`
   defaultMixins.srgb = `not (${defaultMixins.aboveSrgb as string})`
-  if (defaultTheme === 'light') {
-    defaultMixins.light = '(prefers-color-scheme: light)'
-    defaultMixins.dark = `not (${defaultMixins.light})`
+  const lightMedia = defaultTheme === 'light' ? '(prefers-color-scheme: light)' : 'not (prefers-color-scheme: dark)'
+  const darkMedia = defaultTheme === 'dark' ? '(prefers-color-scheme: dark)' : 'not (prefers-color-scheme: light)'
+  if (schemeSources.length === 1 && schemeSources[0] === 'media') {
+    defaultMixins.light = lightMedia
+    defaultMixins.dark = darkMedia
   } else {
-    defaultMixins.dark = '(prefers-color-scheme: dark)'
-    defaultMixins.light = `not (${defaultMixins.dark})`
+    const buildBody = (theme: 'dark' | 'light', mediaQuery: string, sources: Array<'attribute' | 'class' | 'media'>) => {
+      const lines: Array<string> = []
+      for (const source of sources) {
+        if (source === 'attribute') {
+          const attribute = theme === 'light' ? lightAttribute : darkAttribute
+          lines.push(`${rootElement}[${attribute}] & {`, '  @content;', '}')
+        } else if (source === 'class') {
+          const className = theme === 'light' ? lightClass : darkClass
+          lines.push(`${rootElement}.${className} & {`, '  @content;', '}')
+        } else {
+          lines.push(`@media ${mediaQuery} {`, '  @content;', '}')
+        }
+      }
+      return lines
+    }
+    defaultMixins.light = {
+      body: buildBody('light', lightMedia, schemeSources),
+    }
+    defaultMixins.dark = {
+      body: buildBody('dark', darkMedia, schemeSources),
+    }
   }
   if (squareCategory === 'portrait') {
     defaultMixins.portrait = '(max-aspect-ratio: 1)'
