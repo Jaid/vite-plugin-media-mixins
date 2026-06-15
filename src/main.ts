@@ -4,7 +4,7 @@ import type {Dict, StringDict} from 'more-types'
 import type {Arrayable} from 'type-fest'
 import type {Plugin} from 'vite'
 
-import {update} from 'es-toolkit/compat'
+import {toArray, update} from 'es-toolkit/compat'
 import flattenString from 'flatten-string'
 
 import makeFunctions from '#src/lib/makeFunctions.ts'
@@ -83,7 +83,6 @@ type Options = {
    */
   wideWidth?: number
 }
-
 const mediaMixinsPlugin = (options?: Options) => {
   const wideWidth = options?.wideWidth ?? 600
   const tallHeight = options?.tallHeight ?? 600
@@ -93,7 +92,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const easing = options?.easing ?? 'sine'
   const easingSide = options?.easingSide ?? 'large'
   const flavors = options?.flavors ?? ['scss', 'sass']
-  const schemeSources: Array<'attribute' | 'class' | 'media'> = ([] as Array<'attribute' | 'class' | 'media'>).concat(options?.schemeSource ?? ['attribute', 'media'])
+  const schemeSources: Array<'attribute' | 'class' | 'media'> = options?.schemeSource ? (toArray(options.schemeSource) as Array<'attribute' | 'class' | 'media'>) : ['attribute', 'media']
   const rootElement = options?.rootElement ?? ':root'
   const lightAttribute = options?.lightAttribute ?? 'data-light'
   const darkAttribute = options?.darkAttribute ?? 'data-dark'
