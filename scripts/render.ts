@@ -19,10 +19,18 @@ if (typeof sassData === 'string') {
   const userSass = `main
   color: white
   background: black
-  @include dark
+  @include light
     color: black
     background: white
 
+span
+  background: blue
+  @include narrow
+    background: green
+  @include light
+    background: red
+    @include narrow
+      background: yellow
 div
   opacity: toNarrow()
   padding: toNarrow(2.5rem)
