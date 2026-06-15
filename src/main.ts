@@ -1,6 +1,6 @@
 import type {FunctionDef} from '#src/lib/makeFunctions.ts'
 import type {MixinDef} from '#src/lib/makeMediaMixins.ts'
-import type {Dict, StringDict} from 'more-types'
+import type {Dict} from 'more-types'
 import type {Arrayable} from 'type-fest'
 import type {Plugin} from 'vite'
 
@@ -10,16 +10,22 @@ import flattenString from 'flatten-string'
 import makeFunctions from '#src/lib/makeFunctions.ts'
 import makeMediaMixins from '#src/lib/makeMediaMixins.ts'
 
+type Flavor = 'sass' | 'scss'
+type PreprocessorAdditionalDataResult = {
+  content: string
+} | string
+type PreprocessorAdditionalData = (source: string, filename: string) => PreprocessorAdditionalDataResult | Promise<PreprocessorAdditionalDataResult>
+type PreprocessorAdditionalDataOption = PreprocessorAdditionalData | string
 type Options = {
-  additionalMixins?: StringDict
+  additionalMixins?: Dict<MixinDef>
   /**
    * @default 'data-dark'
    */
-  darkAttribute: string
+  darkAttribute?: string
   /**
    * @default 'dark'
    */
-  darkClass: string
+  darkClass?: string
   /**
    * @default 'dark'
    */
@@ -44,16 +50,16 @@ type Options = {
   /**
    * @default 'data-light'
    */
-  lightAttribute: string
+  lightAttribute?: string
   /**
    * @default 'light'
    */
-  lightClass: string
-  mixins?: StringDict
+  lightClass?: string
+  mixins?: Dict<MixinDef>
   /**
    * @default ':root'
    */
-  rootElement: string
+  rootElement?: string
   /**
    * what the expressions of the `light`/`dark` mixins should be based on
    * `media`: use the prefers-color-scheme media feature
@@ -61,7 +67,7 @@ type Options = {
    * Both can be provided simultaneously, with the order determining precedence
    * @default ['attribute', 'media']
    */
-  schemeSource: Arrayable<'attribute' | 'class' | 'media'>
+  schemeSource?: Arrayable<'attribute' | 'class' | 'media'>
   /**
    * width (in percent) of the interpolation zone for `toNarrow`/`toWide` (centered on `wideWidth`)
    * @default 20
@@ -83,6 +89,90 @@ type Options = {
    */
   wideWidth?: number
 }
+const moduleDirectivePattern = /^@(?:forward|use)\b/
+const sassMathDefaultUsePattern = /@use\s+(?:url\()?["']sass:math["']\)?(?=\s*(?:;|with\b|as\s+math\b|\n|$))/
+const variableDeclarationPattern = /^\$[\w-]+:/
+const countCharacter = (text: string, character: string) => {
+  let count = 0
+  for (const currentCharacter of text) {
+    if (currentCharacter === character) {
+      count += 1
+    }
+  }
+  return count
+}
+const splitLines = (content: string) => content.split('\n').map((line, index, array) => {
+  return index < array.length - 1 ? `${line}\n` : line
+}).filter(line => line !== '')
+const getStatementEnd = (lines: Array<string>, startIndex: number, flavor: Flavor) => {
+  let parenBalance = 0
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index]
+    parenBalance += countCharacter(line, '(') - countCharacter(line, ')')
+    if (line.trimEnd().endsWith(';') || flavor === 'sass' && parenBalance <= 0) {
+      return index + 1
+    }
+  }
+  return lines.length
+}
+const splitModuleHeader = (content: string, flavor: Flavor) => {
+  const lines = splitLines(content)
+  let hasModuleDirective = false
+  let index = 0
+  let isInBlockComment = false
+  while (index < lines.length) {
+    const line = lines[index]
+    const trimmed = line.trim()
+    if (isInBlockComment) {
+      index += 1
+      if (trimmed.includes('*/')) {
+        isInBlockComment = false
+      }
+      continue
+    }
+    if (trimmed === '' || trimmed.startsWith('//')) {
+      index += 1
+      continue
+    }
+    if (trimmed.startsWith('/*')) {
+      index += 1
+      if (!trimmed.includes('*/')) {
+        isInBlockComment = true
+      }
+      continue
+    }
+    if (moduleDirectivePattern.test(trimmed)) {
+      hasModuleDirective = true
+      index = getStatementEnd(lines, index, flavor)
+      continue
+    }
+    if (variableDeclarationPattern.test(trimmed)) {
+      index = getStatementEnd(lines, index, flavor)
+      continue
+    }
+    break
+  }
+  if (!hasModuleDirective) {
+    return {
+      body: content,
+      header: '',
+    }
+  }
+  return {
+    body: lines.slice(index).join(''),
+    header: lines.slice(0, index).join(''),
+  }
+}
+const resolveExistingAdditionalData = async (source: string, filename: string, additionalData?: PreprocessorAdditionalDataOption) => {
+  if (!additionalData) {
+    return source
+  }
+  if (typeof additionalData === 'function') {
+    const result = await additionalData(source, filename)
+    return typeof result === 'string' ? result : result.content
+  }
+  return flattenString.lines(additionalData, source)
+}
 const mediaMixinsPlugin = (options?: Options) => {
   const wideWidth = options?.wideWidth ?? 600
   const tallHeight = options?.tallHeight ?? 600
@@ -91,7 +181,7 @@ const mediaMixinsPlugin = (options?: Options) => {
   const squareCategory = options?.squareCategory ?? 'portrait'
   const easing = options?.easing ?? 'sine'
   const easingSide = options?.easingSide ?? 'large'
-  const flavors = options?.flavors ?? ['scss', 'sass']
+  const flavors: Array<Flavor> = options?.flavors ?? ['scss', 'sass']
   const schemeSources: Array<'attribute' | 'class' | 'media'> = options?.schemeSource ? (toArray(options.schemeSource) as Array<'attribute' | 'class' | 'media'>) : ['attribute', 'media']
   const rootElement = options?.rootElement ?? ':root'
   const lightAttribute = options?.lightAttribute ?? 'data-light'
@@ -219,9 +309,15 @@ const mediaMixinsPlugin = (options?: Options) => {
         const mixinCode = makeMediaMixins(mixins, flavor)
         const functionCode = makeFunctions(defaultFunctions, flavor)
         const header = flavor === 'sass' ? "@use 'sass:math'" : '@use "sass:math";'
-        update(config, `css.preprocessorOptions.${flavor}.additionalData`, content => {
-          const combined = flattenString.paragraphs(header, content, mixinCode, functionCode)
-          return `${combined}\n`
+        update(config, `css.preprocessorOptions.${flavor}.additionalData`, additionalData => {
+          const transformContent: PreprocessorAdditionalData = async (source, filename) => {
+            const content = await resolveExistingAdditionalData(source, filename, additionalData as PreprocessorAdditionalDataOption | undefined)
+            const {body: contentBody, header: contentHeader} = splitModuleHeader(content, flavor)
+            const ownHeader = sassMathDefaultUsePattern.test(contentHeader) ? '' : header
+            const combined = flattenString.paragraphs(ownHeader, contentHeader, mixinCode, functionCode, contentBody)
+            return `${combined}\n`
+          }
+          return transformContent
         })
       }
     },

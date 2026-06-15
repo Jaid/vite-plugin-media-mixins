@@ -87,7 +87,7 @@ const buildAndReadCss = async (options: BuildAndReadOptions = {}) => {
       }
     } catch {
       // No assets dir, maybe CSS is elsewhere
-      const entries: Array<string> = await fsExtra.readdir(outDir, {recursive: true})
+      const entries = await fsExtra.readdir(outDir, {recursive: true}) as Array<string>
       for (const entry of entries) {
         if (entry.endsWith('.css')) {
           css = await fsExtra.readFile(join(outDir, entry), 'utf8')
@@ -102,6 +102,11 @@ const buildAndReadCss = async (options: BuildAndReadOptions = {}) => {
   } finally {
     await fsExtra.remove(dir)
   }
+}
+const resolveAdditionalData = async (additionalData: unknown, filename: string) => {
+  expect(additionalData).toBeFunction()
+  const result = await (additionalData as (source: string, filename: string) => Promise<{content: string} | string> | {content: string} | string)('', filename)
+  return typeof result === 'string' ? result : result.content
 }
 test('build generates CSS with default mixins and functions (scss)', async () => {
   const {css} = await buildAndReadCss()
@@ -199,8 +204,8 @@ test('build generates light/dark mixins with attribute and media (default)', asy
 }`,
   })
   // Attribute selectors
-  expect(css).toContain('html[data-light]')
-  expect(css).toContain('html[data-dark]')
+  expect(css).toContain(':root[data-light]')
+  expect(css).toContain(':root[data-dark]')
   // Media queries
   expect(css).toContain('@media (prefers-color-scheme: dark)')
   expect(css).toContain('@media not (prefers-color-scheme: dark)')
@@ -220,8 +225,8 @@ test('build generates light/dark mixins with attribute only', async () => {
   }
 }`,
   })
-  expect(css).toContain('html[data-light]')
-  expect(css).toContain('html[data-dark]')
+  expect(css).toContain(':root[data-light]')
+  expect(css).toContain(':root[data-dark]')
   // No media queries for color scheme
   expect(css).not.toContain('@media (prefers-color-scheme')
   expect(css).not.toContain('@media not (prefers-color-scheme')
@@ -241,8 +246,8 @@ test('build generates light/dark mixins with class only', async () => {
   }
 }`,
   })
-  expect(css).toContain('html.light')
-  expect(css).toContain('html.dark')
+  expect(css).toContain(':root.light')
+  expect(css).toContain(':root.dark')
   // No attribute selectors or media queries
   expect(css).not.toContain('html[data-')
   expect(css).not.toContain('@media (prefers-color-scheme')
@@ -410,6 +415,60 @@ test('build succeeds with empty SCSS file', async () => {
   // Build should succeed, CSS output should exist (even if empty)
   expect(typeof css).toBe('string')
 })
+test('build succeeds with @use in SCSS source', async () => {
+  const {css} = await buildAndReadCss({
+    scssContent: `@use "sass:color";
+
+body {
+  color: color.adjust(red, $lightness: 10%);
+  @include wide {
+    font-size: 18px;
+  }
+}`,
+  })
+  expect(css).toContain('#ff3333')
+  expect(css).toContain('@media screen and (min-width: 600px)')
+})
+test('build succeeds with @use in indented Sass source', async () => {
+  const {css} = await buildAndReadCss({
+    scssContent: `@use 'sass:color'
+
+body
+  color: color.adjust(red, $lightness: 10%)
+  +wide
+    font-size: 18px`,
+    variant: 'sass',
+  })
+  expect(css).toContain('#ff3333')
+  expect(css).toContain('@media screen and (min-width: 600px)')
+})
+test('build succeeds when SCSS source already uses sass:math', async () => {
+  const {css} = await buildAndReadCss({
+    scssContent: `@use "sass:math";
+
+body {
+  width: math.div(10px, 2);
+  @include wide {
+    font-size: 18px;
+  }
+}`,
+  })
+  expect(css).toContain('width: 5px')
+  expect(css).toContain('@media screen and (min-width: 600px)')
+})
+test('build succeeds when indented Sass source already uses sass:math', async () => {
+  const {css} = await buildAndReadCss({
+    scssContent: `@use 'sass:math'
+
+body
+  width: math.div(10px, 2)
+  +wide
+    font-size: 18px`,
+    variant: 'sass',
+  })
+  expect(css).toContain('width: 5px')
+  expect(css).toContain('@media screen and (min-width: 600px)')
+})
 test('plugin name is correct', () => {
   const plugin = vitePluginMediaMixins()
   expect(plugin.name).toBe('media-mixins')
@@ -419,10 +478,10 @@ test('config hook sets additionalData for multiple flavors', async () => {
   const config: UserConfig = {}
   const plugin = vitePluginMediaMixins({flavors: ['scss', 'sass']})
   ;(plugin.config as (config: UserConfig) => void)(config)
-  expect(config.css?.preprocessorOptions?.scss?.additionalData).toBeString()
-  expect(config.css?.preprocessorOptions?.sass?.additionalData).toBeString()
-  expect(config.css?.preprocessorOptions?.scss?.additionalData).toContain('@mixin narrow')
-  expect(config.css?.preprocessorOptions?.sass?.additionalData).toContain('@mixin narrow')
+  const scssAdditionalData = await resolveAdditionalData(config.css?.preprocessorOptions?.scss?.additionalData, 'test.scss')
+  const sassAdditionalData = await resolveAdditionalData(config.css?.preprocessorOptions?.sass?.additionalData, 'test.sass')
+  expect(scssAdditionalData).toContain('@mixin narrow')
+  expect(sassAdditionalData).toContain('@mixin narrow')
 })
 test('build supports non-media mixins with body array', async () => {
   const {css} = await buildAndReadCss({
