@@ -21,7 +21,7 @@
     "build": "NODE_ENV=production build_lib --bundle"
   },
   "dependencies": {
-    "es-toolkit": "^1.47.0",
+    "es-toolkit": "^1.47.1",
     "flatten-string": "^0.2.0"
   },
   "peerDependencies": {
@@ -29,11 +29,11 @@
   },
   "devDependencies": {
     "bun-types": "^1.3.14",
-    "eslint": "^10.4.1",
+    "eslint": "^10.5.0",
     "eslint-config-jaid": "^26.0.0",
     "lightningcss": "^1.32.0",
     "more-types": "^0.6.0",
-    "sass": "^1.100.0",
+    "sass": "^1.101.0",
     "tsconfig-jaid-bun": "^15.2.0",
     "type-fest": "^5.7.0",
     "typescript": "^6.0.3"
